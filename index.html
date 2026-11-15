@@ -23,7 +23,7 @@ button.s{background:var(--ac);border:0;font-weight:600}.seg{display:grid;grid-te
 <h2>PER KATEGORI · ketuk untuk atur budget</h2><div id="cats"></div>
 <h2>TRANSAKSI HARI INI</h2><div id="list"></div><div id="t" hidden></div>
 <button id="fab">+</button>
-<dialog id="f"><form method="dialog"><div class="seg"><label><input type="radio" name="jenis" value="Pengeluaran" checked><span>Pengeluaran</span></label><label><input type="radio" name="jenis" value="Pemasukan"><span>Pemasukan</span></label></div>
+<dialog id="f"><form method="dialog"><button type="button" class="s" id="scan" style="background:#22324d">📷 Scan struk</button><input id="img" type="file" accept="image/*" capture="environment" hidden><div class="seg"><label><input type="radio" name="jenis" value="Pengeluaran" checked><span>Pengeluaran</span></label><label><input type="radio" name="jenis" value="Pemasukan"><span>Pemasukan</span></label></div>
 <input name="jml" type="number" inputmode="numeric" placeholder="Nominal (Rp)" required><input name="nama" placeholder="Catatan / nama item">
 <select name="kat"></select><input name="tgl" type="date" required><button class="s">Simpan</button></form></dialog>
 <script>
@@ -45,5 +45,8 @@ $('#fab').onclick=()=>{$('[name=tgl]').value=ymd(new Date());$('#f').showModal()
 $('#f').onclick=e=>{if(e.target===e.currentTarget)e.currentTarget.close()};
 $('#f form').onsubmit=async e=>{const d=new FormData(e.target),t={tanggal:d.get('tgl'),jam:new Date().toTimeString().slice(0,5),nama:d.get('nama')||d.get('kat'),kategori:d.get('kat'),jumlah:+d.get('jml'),jenis:d.get('jenis'),token:cfg.token};
 rows.push(t);render();e.target.reset();try{await fetch(cfg.url,{method:'POST',body:JSON.stringify(t)});toast('Tersimpan');load()}catch(x){rows.pop();render();toast('Gagal menyimpan, coba lagi')}};
+async function shrink(f){const b=await createImageBitmap(f),k=Math.min(1,1280/Math.max(b.width,b.height)),c=document.createElement('canvas');c.width=b.width*k;c.height=b.height*k;c.getContext('2d').drawImage(b,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.8)}
+$('#scan').onclick=()=>$('#img').click();
+$('#img').onchange=async e=>{const f=e.target.files[0];if(!f)return;toast('Membaca struk…');try{const image=await shrink(f),r=await(await fetch(cfg.url,{method:'POST',body:JSON.stringify({action:'scan',token:cfg.token,image})})).json();if(!r.ok)throw r.error;const d=r.data,F=$('#f form');F.jml.value=parseInt(String(d.total).replace(/\D/g,''))||'';F.nama.value=[d.toko,d.items].filter(Boolean).join(' – ');if(CATS.includes(d.kategori))F.kat.value=d.kategori;if(/^\d{4}-\d{2}-\d{2}$/.test(d.tanggal))F.tgl.value=d.tanggal;toast('Cek hasilnya, lalu Simpan')}catch(x){toast('Gagal scan: '+(x||'coba lagi'))}e.target.value=''};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');load();
 </script></body></html>
